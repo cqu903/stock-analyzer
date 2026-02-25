@@ -1,6 +1,8 @@
 from datetime import date
+from decimal import Decimal
 
 from src.models.schemas import (
+    AIAnalysis,
     Alert,
     AlertType,
     DailyQuote,
@@ -13,7 +15,6 @@ from src.models.schemas import (
     MACDResult,
     Market,
     ProfitabilityResult,
-    RSIResult,
     StockInfo,
     SupportResistance,
     TechnicalReport,
@@ -34,26 +35,56 @@ def test_daily_quote():
     quote = DailyQuote(
         symbol="000001.SZ",
         trade_date=date(2024, 1, 15),
-        open=10.5,
-        high=10.8,
-        low=10.3,
-        close=10.6,
+        open=Decimal("10.5"),
+        high=Decimal("10.8"),
+        low=Decimal("10.3"),
+        close=Decimal("10.6"),
         volume=1000000,
     )
     assert quote.symbol == "000001.SZ"
-    assert quote.close == 10.6
+    assert quote.close == Decimal("10.6")
+
+
+def test_daily_quote_change_pct():
+    """测试涨跌幅计算"""
+    quote = DailyQuote(
+        symbol="000001.SZ",
+        trade_date=date(2024, 1, 15),
+        open=Decimal("10.5"),
+        high=Decimal("10.8"),
+        low=Decimal("10.3"),
+        close=Decimal("10.6"),
+        volume=1000000,
+        pre_close=Decimal("10.0"),
+    )
+    # 涨幅 = (10.6 - 10.0) / 10.0 * 100 = 6%
+    assert quote.change_pct == Decimal("6.0")
+
+
+def test_daily_quote_change_pct_none():
+    """测试无前收盘价时涨跌幅为None"""
+    quote = DailyQuote(
+        symbol="000001.SZ",
+        trade_date=date(2024, 1, 15),
+        open=Decimal("10.5"),
+        high=Decimal("10.8"),
+        low=Decimal("10.3"),
+        close=Decimal("10.6"),
+        volume=1000000,
+    )
+    assert quote.change_pct is None
 
 
 def test_financial():
     fin = Financial(
         symbol="000001.SZ",
         report_date=date(2024, 3, 31),
-        revenue=1000000000,
-        net_profit=100000000,
-        roe=15.5,
-        pe=8.2,
+        revenue=Decimal("1000000000"),
+        net_profit=Decimal("100000000"),
+        roe=Decimal("15.5"),
+        pe=Decimal("8.2"),
     )
-    assert fin.roe == 15.5
+    assert fin.roe == Decimal("15.5")
 
 
 def test_market_enum():
@@ -82,149 +113,188 @@ def test_alert():
     assert alert.symbol == "000001.SZ"
     assert alert.alert_type == AlertType.PRICE_BREAK
     assert alert.is_read is False
+    assert alert.id is None
+
+
+def test_alert_with_id():
+    """测试带ID的预警记录"""
+    alert = Alert(
+        id=123,
+        symbol="000001.SZ",
+        alert_type=AlertType.MACD_GOLDEN_CROSS,
+        message="MACD金叉",
+    )
+    assert alert.id == 123
 
 
 def test_valuation_result():
     """测试估值分析结果"""
     valuation = ValuationResult(
-        pe=10.5,
-        pb=1.2,
-        pe_industry_avg=15.0,
-        pb_industry_avg=1.8,
-        valuation_level="低估",
+        pe=Decimal("10.5"),
+        pb=Decimal("1.2"),
+        industry_avg_pe=Decimal("15.0"),
+        pe_percentile=25.5,
+        is_undervalued=True,
         score=80,
     )
     assert valuation.score == 80
-    assert valuation.valuation_level == "低估"
+    assert valuation.is_undervalued is True
+    assert valuation.pe_percentile == 25.5
 
 
 def test_profitability_result():
     """测试盈利能力分析结果"""
     profit = ProfitabilityResult(
-        roe=18.5,
-        gross_margin=35.0,
-        net_margin=12.0,
+        roe_current=Decimal("18.5"),
+        roe_avg_3y=Decimal("16.0"),
+        gross_margin=Decimal("35.0"),
         roe_trend="上升",
         score=75,
     )
-    assert profit.roe == 18.5
+    assert profit.roe_current == Decimal("18.5")
+    assert profit.roe_avg_3y == Decimal("16.0")
     assert profit.score == 75
 
 
 def test_growth_result():
     """测试成长性分析结果"""
     growth = GrowthResult(
-        revenue_growth=15.0,
-        profit_growth=20.0,
-        cagr_3y=18.5,
-        growth_level="高增长",
+        revenue_yoy=Decimal("15.0"),
+        profit_yoy=Decimal("20.0"),
+        revenue_cagr_3y=Decimal("18.5"),
         score=85,
     )
-    assert growth.cagr_3y == 18.5
-    assert growth.growth_level == "高增长"
+    assert growth.revenue_cagr_3y == Decimal("18.5")
+    assert growth.revenue_yoy == Decimal("15.0")
 
 
 def test_health_result():
     """测试财务健康度分析结果"""
     health = HealthResult(
-        debt_ratio=45.0,
-        current_ratio=1.5,
-        quick_ratio=1.2,
-        health_level="健康",
+        debt_ratio=Decimal("45.0"),
+        debt_trend="稳定",
         score=70,
     )
-    assert health.debt_ratio == 45.0
-    assert health.health_level == "健康"
+    assert health.debt_ratio == Decimal("45.0")
+    assert health.debt_trend == "稳定"
 
 
 def test_fundamental_report():
     """测试基本面分析报告"""
     report = FundamentalReport(
         symbol="000001.SZ",
-        valuation=ValuationResult(valuation_level="合理", score=60),
+        valuation=ValuationResult(score=60),
         profitability=ProfitabilityResult(roe_trend="稳定", score=65),
-        growth=GrowthResult(growth_level="稳定", score=55),
-        health=HealthResult(health_level="健康", score=70),
+        growth=GrowthResult(score=55),
+        financial_health=HealthResult(debt_trend="稳定", score=70),
         overall_score=62,
         summary="公司基本面整体表现稳定",
     )
     assert report.symbol == "000001.SZ"
     assert report.overall_score == 62
+    assert report.financial_health is not None
     assert 0 <= report.overall_score <= 100
 
 
 def test_macd_result():
     """测试MACD指标结果"""
-    macd = MACDResult(dif=0.5, dea=0.3, macd=0.4, signal="金叉")
-    assert macd.dif == 0.5
-    assert macd.signal == "金叉"
+    macd = MACDResult(dif=Decimal("0.5"), dea=Decimal("0.3"), macd=Decimal("0.4"))
+    assert macd.dif == Decimal("0.5")
+
+
+def test_macd_golden_cross():
+    """测试MACD金叉判断"""
+    # 金叉条件: dif > dea 且 macd > 0
+    golden = MACDResult(dif=Decimal("0.5"), dea=Decimal("0.3"), macd=Decimal("0.4"))
+    assert golden.is_golden_cross() is True
+
+    # 非金叉: macd < 0
+    not_golden = MACDResult(dif=Decimal("0.5"), dea=Decimal("0.3"), macd=Decimal("-0.1"))
+    assert not_golden.is_golden_cross() is False
+
+    # 非金叉: dif < dea
+    not_golden2 = MACDResult(dif=Decimal("0.2"), dea=Decimal("0.3"), macd=Decimal("0.1"))
+    assert not_golden2.is_golden_cross() is False
 
 
 def test_kdj_result():
     """测试KDJ指标结果"""
-    kdj = KDJResult(k=75.0, d=70.0, j=85.0, signal="超买")
-    assert kdj.k == 75.0
-    assert kdj.signal == "超买"
-
-
-def test_rsi_result():
-    """测试RSI指标结果"""
-    rsi = RSIResult(rsi_6=65.0, rsi_12=60.0, rsi_24=55.0, signal="正常")
-    assert rsi.rsi_6 == 65.0
-    assert rsi.signal == "正常"
+    kdj = KDJResult(k=Decimal("75.0"), d=Decimal("70.0"), j=Decimal("85.0"))
+    assert kdj.k == Decimal("75.0")
 
 
 def test_indicators():
     """测试技术指标集合"""
     indicators = Indicators(
-        macd=MACDResult(dif=0.5, dea=0.3, macd=0.4, signal="多头"),
-        kdj=KDJResult(k=50.0, d=48.0, j=54.0, signal="正常"),
-        ma5=10.5,
-        ma20=10.0,
-        ma60=9.5,
+        macd=MACDResult(dif=Decimal("0.5"), dea=Decimal("0.3"), macd=Decimal("0.4")),
+        kdj=KDJResult(k=Decimal("50.0"), d=Decimal("48.0"), j=Decimal("54.0")),
+        rsi=Decimal("65.5"),
+        ma5=Decimal("10.5"),
+        ma20=Decimal("10.0"),
+        ma60=Decimal("9.5"),
     )
-    assert indicators.ma5 == 10.5
-    assert indicators.macd.signal == "多头"
+    assert indicators.ma5 == Decimal("10.5")
+    assert indicators.rsi == Decimal("65.5")
 
 
 def test_trend_result():
     """测试趋势分析结果"""
     trend = TrendResult(
-        short_term="上涨",
-        medium_term="震荡",
-        long_term="上涨",
-        trend_strength=65,
+        direction="上涨",
+        current_price=Decimal("10.5"),
     )
-    assert trend.short_term == "上涨"
-    assert trend.trend_strength == 65
+    assert trend.direction == "上涨"
+    assert trend.current_price == Decimal("10.5")
 
 
 def test_support_resistance():
     """测试支撑压力位"""
     sr = SupportResistance(
-        support_levels=[10.0, 9.5, 9.0],
-        resistance_levels=[11.0, 11.5, 12.0],
-        current_price=10.5,
-        nearest_support=10.0,
-        nearest_resistance=11.0,
+        resistance_1=Decimal("11.0"),
+        resistance_2=Decimal("11.5"),
+        support_1=Decimal("10.0"),
+        support_2=Decimal("9.5"),
     )
-    assert sr.current_price == 10.5
-    assert len(sr.support_levels) == 3
+    assert sr.resistance_1 == Decimal("11.0")
+    assert sr.support_1 == Decimal("10.0")
+    assert sr.resistance_2 == Decimal("11.5")
+    assert sr.support_2 == Decimal("9.5")
+
+
+def test_support_resistance_minimal():
+    """测试最小支撑压力位"""
+    sr = SupportResistance(
+        resistance_1=Decimal("11.0"),
+        support_1=Decimal("10.0"),
+    )
+    assert sr.resistance_2 is None
+    assert sr.support_2 is None
 
 
 def test_technical_report():
     """测试技术面分析报告"""
     report = TechnicalReport(
         symbol="000001.SZ",
-        trend=TrendResult(
-            short_term="上涨",
-            medium_term="上涨",
-            long_term="震荡",
-            trend_strength=70,
-        ),
-        signal_summary="买入",
+        trend=TrendResult(direction="上涨", current_price=Decimal("10.5")),
+        patterns=["金叉", "突破均线"],
         score=72,
     )
     assert report.symbol == "000001.SZ"
-    assert report.signal_summary == "买入"
+    assert "金叉" in report.patterns
     assert 0 <= report.score <= 100
+
+
+def test_ai_analysis():
+    """测试AI分析报告"""
+    analysis = AIAnalysis(
+        symbol="000001.SZ",
+        summary="该股票基本面良好，技术面呈上涨趋势",
+        recommendation="建议关注",
+        risks=["行业竞争加剧", "宏观经济波动"],
+        confidence=75,
+    )
+    assert analysis.symbol == "000001.SZ"
+    assert analysis.summary == "该股票基本面良好，技术面呈上涨趋势"
+    assert analysis.recommendation == "建议关注"
+    assert len(analysis.risks) == 2
+    assert "行业竞争加剧" in analysis.risks
