@@ -3,14 +3,13 @@
 提供港股市场股票行情和财务数据
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
-from typing import Optional
 
 from loguru import logger
 
 from src.data.base import BaseProvider
-from src.models.schemas import DailyQuote, Financial, StockInfo, Market
+from src.models.schemas import DailyQuote, Financial, Market, StockInfo
 
 
 class FutuProvider(BaseProvider):
@@ -64,7 +63,7 @@ class FutuProvider(BaseProvider):
             ))
         return quotes
 
-    def get_stock_info(self, symbol: str) -> Optional[StockInfo]:
+    def get_stock_info(self, symbol: str) -> StockInfo | None:
         """获取股票基础信息"""
         futu_symbol, market = self._parse_symbol(symbol)
 

@@ -4,10 +4,9 @@ AI客户端
 """
 
 from datetime import datetime
-from typing import Optional
 
-from openai import OpenAI
 from loguru import logger
+from openai import OpenAI
 
 from src.models.schemas import AIAnalysis
 

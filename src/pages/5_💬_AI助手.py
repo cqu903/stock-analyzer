@@ -3,21 +3,19 @@ AI助手页面
 AI对话分析股票
 """
 
+
 import streamlit as st
-from datetime import datetime
 
 from config.settings import get_settings
-from src.data.repository import Repository
 from src.ai.client import AIClient
-from src.ai.prompts import Prompts
-from src.analysis.technical import TechnicalAnalyzer
 from src.analysis.fundamental import FundamentalAnalyzer
+from src.analysis.technical import TechnicalAnalyzer
+from src.data.repository import Repository
 
 
 def init_session_state():
     """初始化会话状态"""
     if "repository" not in st.session_state:
-        settings = get_settings()
         st.session_state.repository = Repository("sqlite:///stock_analyzer.db")
 
     if "ai_client" not in st.session_state:

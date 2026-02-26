@@ -6,7 +6,6 @@
 - 每15分钟检查预警条件
 """
 
-from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from loguru import logger

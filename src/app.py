@@ -3,10 +3,10 @@ Streamlit主入口
 股票分析系统首页，展示概览信息和快捷功能
 """
 
-import streamlit as st
 from datetime import datetime
 
-from config.settings import get_settings
+import streamlit as st
+
 from src.data.repository import Repository
 from src.models.schemas import Market
 
@@ -14,7 +14,6 @@ from src.models.schemas import Market
 def init_session_state():
     """初始化会话状态"""
     if "repository" not in st.session_state:
-        settings = get_settings()
         # 使用SQLite作为默认数据库（测试模式）
         st.session_state.repository = Repository("sqlite:///stock_analyzer.db")
 

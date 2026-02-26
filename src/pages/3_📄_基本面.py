@@ -3,20 +3,18 @@
 估值分析、盈利能力、成长性、财务健康度、雷达图
 """
 
-import streamlit as st
-from datetime import datetime
-import plotly.graph_objects as go
-import pandas as pd
 
-from config.settings import get_settings
-from src.data.repository import Repository
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+
 from src.analysis.fundamental import FundamentalAnalyzer
+from src.data.repository import Repository
 
 
 def init_session_state():
     """初始化会话状态"""
     if "repository" not in st.session_state:
-        settings = get_settings()
         st.session_state.repository = Repository("sqlite:///stock_analyzer.db")
 
 

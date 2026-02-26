@@ -5,13 +5,11 @@ Tushare数据源（A股）
 
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Optional
 
 import tushare as ts
-from loguru import logger
 
 from src.data.base import BaseProvider
-from src.models.schemas import DailyQuote, Financial, StockInfo, Market
+from src.models.schemas import DailyQuote, Financial, Market, StockInfo
 
 
 class TushareProvider(BaseProvider):
@@ -100,7 +98,7 @@ class TushareProvider(BaseProvider):
             ))
         return quotes
 
-    def get_stock_info(self, symbol: str) -> Optional[StockInfo]:
+    def get_stock_info(self, symbol: str) -> StockInfo | None:
         """获取股票基础信息
 
         Args:

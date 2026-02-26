@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pandas as pd
 
-from src.models.schemas import MACDResult, KDJResult
+from src.models.schemas import KDJResult, MACDResult
 
 
 def calc_macd(df: pd.DataFrame, fast: int = 12, slow: int = 26, signal: int = 9) -> MACDResult:

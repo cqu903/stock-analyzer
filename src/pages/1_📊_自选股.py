@@ -3,19 +3,16 @@
 添加、删除自选股，查看实时行情
 """
 
-import streamlit as st
 from datetime import datetime
-from decimal import Decimal
 
-from config.settings import get_settings
+import streamlit as st
+
 from src.data.repository import Repository
-from src.models.schemas import Market
 
 
 def init_session_state():
     """初始化会话状态"""
     if "repository" not in st.session_state:
-        settings = get_settings()
         st.session_state.repository = Repository("sqlite:///stock_analyzer.db")
 
 
@@ -148,10 +145,10 @@ def main():
         alert_col1, alert_col2 = st.columns(2)
 
         with alert_col1:
-            high_price = st.number_input("价格上限预警", min_value=0.0, step=0.1)
+            st.number_input("价格上限预警", min_value=0.0, step=0.1)
 
         with alert_col2:
-            low_price = st.number_input("价格下限预警", min_value=0.0, step=0.1)
+            st.number_input("价格下限预警", min_value=0.0, step=0.1)
 
         if st.button("保存预警设置", type="primary"):
             st.success(f"已保存 {selected_symbol} 的预警设置")

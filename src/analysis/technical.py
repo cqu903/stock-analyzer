@@ -5,17 +5,15 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Optional
 
 import pandas as pd
 from loguru import logger
 
-from src.analysis.indicators import calc_macd, calc_rsi, calc_kdj, calc_ma, calc_bollinger_bands
+from src.analysis.indicators import calc_kdj, calc_ma, calc_macd, calc_rsi
 from src.data.repository import Repository
 from src.models.schemas import (
     DailyQuote,
     Indicators,
-    MACDResult,
     SupportResistance,
     TechnicalReport,
     TrendResult,
@@ -129,10 +127,6 @@ class TechnicalAnalyzer:
         ma5 = closes.rolling(window=5).mean().iloc[-1]
         ma10 = closes.rolling(window=10).mean().iloc[-1]
         ma20 = closes.rolling(window=20).mean().iloc[-1]
-        ma60 = closes.rolling(window=min(60, len(closes))).mean().iloc[-1]
-
-        # 计算价格相对于均线的位置
-        price = closes.iloc[-1]
 
         # 计算短期趋势（5日vs10日）
         short_trend = "上涨" if ma5 > ma10 else "下跌"
@@ -144,9 +138,6 @@ class TechnicalAnalyzer:
         recent_returns = closes.pct_change().tail(20)
         positive_days = (recent_returns > 0).sum()
         trend_strength = positive_days / len(recent_returns)
-
-        # 计算波动率
-        volatility = recent_returns.std()
 
         # 判断趋势方向
         if trend_strength > 0.65 and short_trend == "上涨" and mid_trend == "上涨":

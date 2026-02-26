@@ -3,23 +3,20 @@
 K线图、技术指标、趋势分析、支撑压力位
 """
 
-import streamlit as st
-from datetime import datetime, timedelta
+
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 from plotly.subplots import make_subplots
-from decimal import Decimal
 
-from config.settings import get_settings
-from src.data.repository import Repository
+from src.analysis.indicators import calc_ma, calc_macd
 from src.analysis.technical import TechnicalAnalyzer
-from src.analysis.indicators import calc_ma, calc_macd, calc_kdj, calc_rsi, calc_bollinger_bands
+from src.data.repository import Repository
 
 
 def init_session_state():
     """初始化会话状态"""
     if "repository" not in st.session_state:
-        settings = get_settings()
         st.session_state.repository = Repository("sqlite:///stock_analyzer.db")
 
 
@@ -162,7 +159,6 @@ def main():
 
         with col2:
             if report.trend:
-                trend_color = "green" if "上涨" in report.trend.direction else "red" if "下跌" in report.trend.direction else "gray"
                 st.metric("趋势方向", report.trend.direction)
             else:
                 st.metric("趋势方向", "--")

@@ -6,7 +6,6 @@ Pydantic数据模型定义
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -25,8 +24,8 @@ class StockInfo(BaseModel):
     symbol: str = Field(..., description="股票代码，如 000001.SZ, 00700.HK, AAPL.US")
     name: str = Field(..., description="股票名称")
     market: Market = Field(..., description="所属市场")
-    industry: Optional[str] = Field(None, description="所属行业")
-    list_date: Optional[date] = Field(None, description="上市日期")
+    industry: str | None = Field(None, description="所属行业")
+    list_date: date | None = Field(None, description="上市日期")
 
 
 class DailyQuote(BaseModel):
@@ -38,13 +37,13 @@ class DailyQuote(BaseModel):
     low: Decimal = Field(..., description="最低价")
     close: Decimal = Field(..., description="收盘价")
     volume: int = Field(..., description="成交量")
-    pre_close: Optional[Decimal] = Field(None, description="前收盘价")
-    amount: Optional[Decimal] = Field(None, description="成交额")
-    turnover_rate: Optional[Decimal] = Field(None, description="换手率")
+    pre_close: Decimal | None = Field(None, description="前收盘价")
+    amount: Decimal | None = Field(None, description="成交额")
+    turnover_rate: Decimal | None = Field(None, description="换手率")
 
     @computed_field
     @property
-    def change_pct(self) -> Optional[Decimal]:
+    def change_pct(self) -> Decimal | None:
         """涨跌幅百分比"""
         if self.pre_close and self.pre_close != 0:
             return (self.close - self.pre_close) / self.pre_close * 100
@@ -55,24 +54,24 @@ class Financial(BaseModel):
     """财务数据"""
     symbol: str = Field(..., description="股票代码")
     report_date: date = Field(..., description="报告期")
-    revenue: Optional[Decimal] = Field(None, description="营业收入")
-    net_profit: Optional[Decimal] = Field(None, description="净利润")
-    total_assets: Optional[Decimal] = Field(None, description="总资产")
-    total_equity: Optional[Decimal] = Field(None, description="股东权益")
-    roe: Optional[Decimal] = Field(None, description="净资产收益率")
-    pe: Optional[Decimal] = Field(None, description="市盈率")
-    pb: Optional[Decimal] = Field(None, description="市净率")
-    debt_ratio: Optional[Decimal] = Field(None, description="资产负债率")
-    gross_margin: Optional[Decimal] = Field(None, description="毛利率")
+    revenue: Decimal | None = Field(None, description="营业收入")
+    net_profit: Decimal | None = Field(None, description="净利润")
+    total_assets: Decimal | None = Field(None, description="总资产")
+    total_equity: Decimal | None = Field(None, description="股东权益")
+    roe: Decimal | None = Field(None, description="净资产收益率")
+    pe: Decimal | None = Field(None, description="市盈率")
+    pb: Decimal | None = Field(None, description="市净率")
+    debt_ratio: Decimal | None = Field(None, description="资产负债率")
+    gross_margin: Decimal | None = Field(None, description="毛利率")
 
 
 class WatchlistItem(BaseModel):
     """自选股项目"""
     symbol: str = Field(..., description="股票代码")
     added_at: datetime = Field(default_factory=datetime.now, description="添加时间")
-    notes: Optional[str] = Field(None, description="用户备注")
-    alert_price_high: Optional[Decimal] = Field(None, description="价格上限预警")
-    alert_price_low: Optional[Decimal] = Field(None, description="价格下限预警")
+    notes: str | None = Field(None, description="用户备注")
+    alert_price_high: Decimal | None = Field(None, description="价格上限预警")
+    alert_price_low: Decimal | None = Field(None, description="价格下限预警")
 
 
 class AlertType(str, Enum):
@@ -89,7 +88,7 @@ class AlertType(str, Enum):
 
 class Alert(BaseModel):
     """预警记录"""
-    id: Optional[int] = Field(None, description="预警ID")
+    id: int | None = Field(None, description="预警ID")
     symbol: str = Field(..., description="股票代码")
     alert_type: AlertType = Field(..., description="预警类型")
     message: str = Field(..., description="预警消息")
@@ -109,35 +108,35 @@ class DataSyncLog(BaseModel):
 
 class ValuationResult(BaseModel):
     """估值分析结果"""
-    pe: Optional[Decimal] = Field(None, description="市盈率")
-    pb: Optional[Decimal] = Field(None, description="市净率")
-    industry_avg_pe: Optional[Decimal] = Field(None, description="行业平均市盈率")
-    pe_percentile: Optional[float] = Field(None, description="PE百分位")
-    is_undervalued: Optional[bool] = Field(None, description="是否低估")
+    pe: Decimal | None = Field(None, description="市盈率")
+    pb: Decimal | None = Field(None, description="市净率")
+    industry_avg_pe: Decimal | None = Field(None, description="行业平均市盈率")
+    pe_percentile: float | None = Field(None, description="PE百分位")
+    is_undervalued: bool | None = Field(None, description="是否低估")
     score: int = Field(..., ge=0, le=100, description="估值评分")
 
 
 class ProfitabilityResult(BaseModel):
     """盈利能力分析结果"""
-    roe_current: Optional[Decimal] = Field(None, description="当前净资产收益率")
-    roe_avg_3y: Optional[Decimal] = Field(None, description="3年平均ROE")
-    gross_margin: Optional[Decimal] = Field(None, description="毛利率")
+    roe_current: Decimal | None = Field(None, description="当前净资产收益率")
+    roe_avg_3y: Decimal | None = Field(None, description="3年平均ROE")
+    gross_margin: Decimal | None = Field(None, description="毛利率")
     roe_trend: str = Field(..., description="ROE趋势：上升/稳定/下降")
     score: int = Field(..., ge=0, le=100, description="盈利能力评分")
 
 
 class GrowthResult(BaseModel):
     """成长性分析结果"""
-    revenue_yoy: Optional[Decimal] = Field(None, description="营收同比增长率")
-    profit_yoy: Optional[Decimal] = Field(None, description="利润同比增长率")
-    revenue_cagr_3y: Optional[Decimal] = Field(None, description="3年营收复合增长率")
+    revenue_yoy: Decimal | None = Field(None, description="营收同比增长率")
+    profit_yoy: Decimal | None = Field(None, description="利润同比增长率")
+    revenue_cagr_3y: Decimal | None = Field(None, description="3年营收复合增长率")
     score: int = Field(..., ge=0, le=100, description="成长性评分")
 
 
 class HealthResult(BaseModel):
     """财务健康度分析结果"""
-    debt_ratio: Optional[Decimal] = Field(None, description="资产负债率")
-    debt_trend: Optional[str] = Field(None, description="负债率趋势：上升/稳定/下降")
+    debt_ratio: Decimal | None = Field(None, description="资产负债率")
+    debt_trend: str | None = Field(None, description="负债率趋势：上升/稳定/下降")
     score: int = Field(..., ge=0, le=100, description="健康度评分")
 
 
@@ -145,12 +144,12 @@ class FundamentalReport(BaseModel):
     """基本面分析报告"""
     symbol: str = Field(..., description="股票代码")
     analysis_date: date = Field(default_factory=date.today, description="分析日期")
-    valuation: Optional[ValuationResult] = Field(None, description="估值分析")
-    profitability: Optional[ProfitabilityResult] = Field(None, description="盈利能力分析")
-    growth: Optional[GrowthResult] = Field(None, description="成长性分析")
-    financial_health: Optional[HealthResult] = Field(None, description="财务健康度分析")
+    valuation: ValuationResult | None = Field(None, description="估值分析")
+    profitability: ProfitabilityResult | None = Field(None, description="盈利能力分析")
+    growth: GrowthResult | None = Field(None, description="成长性分析")
+    financial_health: HealthResult | None = Field(None, description="财务健康度分析")
     overall_score: int = Field(..., ge=0, le=100, description="综合评分")
-    summary: Optional[str] = Field(None, description="分析摘要")
+    summary: str | None = Field(None, description="分析摘要")
 
 
 # ============== 技术面分析模型 ==============
@@ -175,12 +174,12 @@ class KDJResult(BaseModel):
 
 class Indicators(BaseModel):
     """技术指标集合"""
-    ma5: Optional[Decimal] = Field(None, description="5日均线")
-    ma20: Optional[Decimal] = Field(None, description="20日均线")
-    ma60: Optional[Decimal] = Field(None, description="60日均线")
-    macd: Optional[MACDResult] = Field(None, description="MACD指标")
-    kdj: Optional[KDJResult] = Field(None, description="KDJ指标")
-    rsi: Optional[Decimal] = Field(None, description="RSI指标")
+    ma5: Decimal | None = Field(None, description="5日均线")
+    ma20: Decimal | None = Field(None, description="20日均线")
+    ma60: Decimal | None = Field(None, description="60日均线")
+    macd: MACDResult | None = Field(None, description="MACD指标")
+    kdj: KDJResult | None = Field(None, description="KDJ指标")
+    rsi: Decimal | None = Field(None, description="RSI指标")
 
 
 class TrendResult(BaseModel):
@@ -192,18 +191,18 @@ class TrendResult(BaseModel):
 class SupportResistance(BaseModel):
     """支撑压力位"""
     resistance_1: Decimal = Field(..., description="第一压力位")
-    resistance_2: Optional[Decimal] = Field(None, description="第二压力位")
+    resistance_2: Decimal | None = Field(None, description="第二压力位")
     support_1: Decimal = Field(..., description="第一支撑位")
-    support_2: Optional[Decimal] = Field(None, description="第二支撑位")
+    support_2: Decimal | None = Field(None, description="第二支撑位")
 
 
 class TechnicalReport(BaseModel):
     """技术面分析报告"""
     symbol: str = Field(..., description="股票代码")
     analysis_date: date = Field(default_factory=date.today, description="分析日期")
-    trend: Optional[TrendResult] = Field(None, description="趋势分析")
-    indicators: Optional[Indicators] = Field(None, description="技术指标")
-    support_resistance: Optional[SupportResistance] = Field(None, description="支撑压力位")
+    trend: TrendResult | None = Field(None, description="趋势分析")
+    indicators: Indicators | None = Field(None, description="技术指标")
+    support_resistance: SupportResistance | None = Field(None, description="支撑压力位")
     patterns: list[str] = Field(default_factory=list, description="K线形态列表")
     score: int = Field(..., ge=0, le=100, description="技术面评分")
 
@@ -215,6 +214,6 @@ class AIAnalysis(BaseModel):
     symbol: str = Field(..., description="股票代码")
     generated_at: datetime = Field(default_factory=datetime.now, description="生成时间")
     summary: str = Field(..., description="分析摘要")
-    recommendation: Optional[str] = Field(None, description="投资建议")
+    recommendation: str | None = Field(None, description="投资建议")
     risks: list[str] = Field(default_factory=list, description="风险列表")
     confidence: int = Field(..., ge=0, le=100, description="置信度")

@@ -3,10 +3,10 @@
 预警设置和预警历史记录
 """
 
-import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from config.settings import get_settings
+import streamlit as st
+
 from src.data.repository import Repository
 from src.models.schemas import AlertType
 
@@ -14,7 +14,6 @@ from src.models.schemas import AlertType
 def init_session_state():
     """初始化会话状态"""
     if "repository" not in st.session_state:
-        settings = get_settings()
         st.session_state.repository = Repository("sqlite:///stock_analyzer.db")
 
 
@@ -60,7 +59,7 @@ def main():
 
                 with price_col1:
                     enable_high = st.checkbox("启用价格上限预警")
-                    high_price = st.number_input(
+                    _ = st.number_input(  # noqa: F841
                         "价格上限",
                         min_value=0.0,
                         step=0.1,
@@ -69,7 +68,7 @@ def main():
 
                 with price_col2:
                     enable_low = st.checkbox("启用价格下限预警")
-                    low_price = st.number_input(
+                    _ = st.number_input(  # noqa: F841
                         "价格下限",
                         min_value=0.0,
                         step=0.1,
@@ -84,12 +83,12 @@ def main():
                 tech_col1, tech_col2 = st.columns(2)
 
                 with tech_col1:
-                    enable_macd = st.checkbox("MACD金叉/死叉预警")
-                    enable_rsi = st.checkbox("RSI超买/超卖预警")
+                    _ = st.checkbox("MACD金叉/死叉预警")  # noqa: F841
+                    _ = st.checkbox("RSI超买/超卖预警")  # noqa: F841
 
                 with tech_col2:
-                    enable_ma = st.checkbox("均线突破预警")
-                    enable_vol = st.checkbox("成交量异动预警")
+                    _ = st.checkbox("均线突破预警")  # noqa: F841
+                    _ = st.checkbox("成交量异动预警")  # noqa: F841
 
                 st.markdown("---")
 
@@ -205,19 +204,19 @@ def main():
         notif_col1, notif_col2 = st.columns(2)
 
         with notif_col1:
-            enable_email = st.checkbox("启用邮件通知")
-            email_address = st.text_input(
+            _ = st.checkbox("启用邮件通知")  # noqa: F841
+            _ = st.text_input(  # noqa: F841
                 "邮箱地址",
                 placeholder="your@email.com",
-                disabled=not enable_email,
+                disabled=True,
             )
 
         with notif_col2:
-            enable_webhook = st.checkbox("启用Webhook通知")
-            webhook_url = st.text_input(
+            _ = st.checkbox("启用Webhook通知")  # noqa: F841
+            _ = st.text_input(  # noqa: F841
                 "Webhook URL",
                 placeholder="https://your-webhook-url",
-                disabled=not enable_webhook,
+                disabled=True,
             )
 
         st.markdown("---")
@@ -228,7 +227,7 @@ def main():
         freq_col1, freq_col2 = st.columns(2)
 
         with freq_col1:
-            scan_interval = st.select_slider(
+            _ = st.select_slider(  # noqa: F841
                 "扫描间隔",
                 options=[1, 5, 10, 15, 30, 60],
                 value=5,
@@ -236,7 +235,7 @@ def main():
             )
 
         with freq_col2:
-            trading_hours_only = st.checkbox("仅交易时间扫描", value=True)
+            _ = st.checkbox("仅交易时间扫描", value=True)  # noqa: F841
 
         st.markdown("---")
 
@@ -246,12 +245,12 @@ def main():
         silence_col1, silence_col2 = st.columns(2)
 
         with silence_col1:
-            enable_silence = st.checkbox("启用静默时段")
-            silence_start = st.time_input("开始时间", value=datetime.strptime("22:00", "%H:%M").time())
+            _ = st.checkbox("启用静默时段")  # noqa: F841
+            _ = st.time_input("开始时间", value=datetime.strptime("22:00", "%H:%M").time())  # noqa: F841
 
         with silence_col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            silence_end = st.time_input("结束时间", value=datetime.strptime("08:00", "%H:%M").time())
+            _ = st.time_input("结束时间", value=datetime.strptime("08:00", "%H:%M").time())  # noqa: F841
 
         st.markdown("---")
 
