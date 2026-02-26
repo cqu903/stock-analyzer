@@ -30,6 +30,10 @@ from src.models.portfolio import (
     Position, Transaction, TradeType
 )
 
+from src.models.screening import (
+    Strategy, ScreenResult
+)
+
 __all__ = [
     # 枚举
     "Market",
@@ -65,4 +69,7 @@ __all__ = [
     "Position",
     "Transaction",
     "TradeType",
+    # 量化选股模型
+    "Strategy",
+    "ScreenResult",
 ]
