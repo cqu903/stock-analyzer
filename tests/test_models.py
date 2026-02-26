@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from src.models.schemas import (
     AIAnalysis,
     Alert,
@@ -298,3 +300,162 @@ def test_ai_analysis():
     assert analysis.recommendation == "建议关注"
     assert len(analysis.risks) == 2
     assert "行业竞争加剧" in analysis.risks
+
+
+# ============== 负值验证测试 ==============
+
+
+def test_valuation_result_score_negative():
+    """测试估值评分不能为负数"""
+    with pytest.raises(ValueError):
+        ValuationResult(score=-1)
+
+
+def test_profitability_result_score_negative():
+    """测试盈利能力评分不能为负数"""
+    with pytest.raises(ValueError):
+        ProfitabilityResult(roe_trend="上升", score=-5)
+
+
+def test_profitability_result_score_over_max():
+    """测试盈利能力评分不能超过100"""
+    with pytest.raises(ValueError):
+        ProfitabilityResult(roe_trend="上升", score=101)
+
+
+def test_growth_result_score_negative():
+    """测试成长性评分不能为负数"""
+    with pytest.raises(ValueError):
+        GrowthResult(score=-10)
+
+
+def test_growth_result_score_over_max():
+    """测试成长性评分不能超过100"""
+    with pytest.raises(ValueError):
+        GrowthResult(score=150)
+
+
+def test_health_result_score_negative():
+    """测试健康度评分不能为负数"""
+    with pytest.raises(ValueError):
+        HealthResult(debt_trend="稳定", score=-1)
+
+
+def test_health_result_score_over_max():
+    """测试健康度评分不能超过100"""
+    with pytest.raises(ValueError):
+        HealthResult(debt_trend="稳定", score=101)
+
+
+def test_fundamental_report_score_negative():
+    """测试基本面报告综合评分不能为负数"""
+    with pytest.raises(ValueError):
+        FundamentalReport(
+            symbol="000001.SZ",
+            valuation=ValuationResult(score=60),
+            profitability=ProfitabilityResult(roe_trend="稳定", score=65),
+            growth=GrowthResult(score=55),
+            financial_health=HealthResult(debt_trend="稳定", score=70),
+            overall_score=-1,
+        )
+
+
+def test_fundamental_report_score_over_max():
+    """测试基本面报告综合评分不能超过100"""
+    with pytest.raises(ValueError):
+        FundamentalReport(
+            symbol="000001.SZ",
+            valuation=ValuationResult(score=60),
+            profitability=ProfitabilityResult(roe_trend="稳定", score=65),
+            growth=GrowthResult(score=55),
+            financial_health=HealthResult(debt_trend="稳定", score=70),
+            overall_score=101,
+        )
+
+
+def test_technical_report_score_negative():
+    """测试技术面报告评分不能为负数"""
+    with pytest.raises(ValueError):
+        TechnicalReport(
+            symbol="000001.SZ",
+            trend=TrendResult(direction="上涨", current_price=Decimal("10.5")),
+            score=-1,
+        )
+
+
+def test_technical_report_score_over_max():
+    """测试技术面报告评分不能超过100"""
+    with pytest.raises(ValueError):
+        TechnicalReport(
+            symbol="000001.SZ",
+            trend=TrendResult(direction="上涨", current_price=Decimal("10.5")),
+            score=101,
+        )
+
+
+def test_ai_analysis_confidence_negative():
+    """测试AI分析置信度不能为负数"""
+    with pytest.raises(ValueError):
+        AIAnalysis(
+            symbol="000001.SZ",
+            summary="测试分析",
+            confidence=-1,
+        )
+
+
+def test_ai_analysis_confidence_over_max():
+    """测试AI分析置信度不能超过100"""
+    with pytest.raises(ValueError):
+        AIAnalysis(
+            symbol="000001.SZ",
+            summary="测试分析",
+            confidence=101,
+        )
+
+
+# ============== 枚举值验证测试 ==============
+
+
+def test_market_enum_valid_values():
+    """测试市场枚举的有效值"""
+    assert Market.A_STOCK == "A股"
+    assert Market.HK_STOCK == "港股"
+    assert Market.US_STOCK == "美股"
+
+
+def test_market_enum_from_string():
+    """测试从字符串创建市场枚举"""
+    assert Market("A股") == Market.A_STOCK
+    assert Market("港股") == Market.HK_STOCK
+    assert Market("美股") == Market.US_STOCK
+
+
+def test_market_enum_invalid_string():
+    """测试无效字符串创建市场枚举应失败"""
+    with pytest.raises(ValueError):
+        Market("InvalidMarket")
+
+
+def test_alert_type_enum_values():
+    """测试预警类型枚举值"""
+    assert AlertType.PRICE_BREAK == "价格突破"
+    assert AlertType.ABNORMAL_VOLATILITY == "异常波动"
+    assert AlertType.VOLUME_SURGE == "成交量放大"
+    assert AlertType.MACD_GOLDEN_CROSS == "MACD金叉"
+    assert AlertType.MACD_DEATH_CROSS == "MACD死叉"
+    assert AlertType.RSI_OVERBOUGHT == "RSI超买"
+    assert AlertType.RSI_OVERSOLD == "RSI超卖"
+    assert AlertType.CUSTOM == "自定义"
+
+
+def test_alert_type_enum_from_string():
+    """测试从字符串创建预警类型枚举"""
+    assert AlertType("价格突破") == AlertType.PRICE_BREAK
+    assert AlertType("MACD金叉") == AlertType.MACD_GOLDEN_CROSS
+    assert AlertType("自定义") == AlertType.CUSTOM
+
+
+def test_alert_type_enum_invalid_string():
+    """测试无效字符串创建预警类型枚举应失败"""
+    with pytest.raises(ValueError):
+        AlertType("InvalidAlertType")
