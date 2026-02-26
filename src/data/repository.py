@@ -31,6 +31,18 @@ class Repository:
             db_url: 数据库连接URL，如 mysql+pymysql://user:pass@host/db 或 sqlite:///path/to/db.sqlite
         """
         self.engine: Engine = create_engine(db_url, echo=False, pool_pre_ping=True)
+        # 启用SQLite外键约束
+        if "sqlite" in db_url:
+            from sqlalchemy import event
+            from sqlite3 import Connection
+
+            @event.listens_for(self.engine, "connect")
+            def set_sqlite_pragma(dbapi_conn, connection_record):
+                if isinstance(dbapi_conn, Connection):
+                    cursor = dbapi_conn.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON;")
+                    cursor.close()
+
         self._create_tables()
         logger.info(f"Repository initialized with {db_url}")
 
@@ -108,12 +120,41 @@ class Repository:
             UNIQUE(data_type, market)
         );
 
+        -- 账户表
+        CREATE TABLE IF NOT EXISTS accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(50) NOT NULL,
+            account_type VARCHAR(20) DEFAULT '证券账户',
+            initial_capital DECIMAL(18,2) NOT NULL,
+            current_cash DECIMAL(18,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- 交易记录表
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INT NOT NULL,
+            symbol VARCHAR(20) NOT NULL,
+            trade_type VARCHAR(10) NOT NULL,
+            shares INT NOT NULL,
+            price DECIMAL(10,3) NOT NULL,
+            amount DECIMAL(18,2) NOT NULL,
+            fee DECIMAL(10,2) DEFAULT 0,
+            trade_date DATE NOT NULL,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        );
+
         -- 创建索引
         CREATE INDEX IF NOT EXISTS idx_quote_symbol ON daily_quote(symbol);
         CREATE INDEX IF NOT EXISTS idx_quote_date ON daily_quote(trade_date);
         CREATE INDEX IF NOT EXISTS idx_financial_symbol ON financial(symbol);
         CREATE INDEX IF NOT EXISTS idx_alert_symbol ON alert(symbol);
         CREATE INDEX IF NOT EXISTS idx_alert_time ON alert(triggered_at);
+        CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id);
+        CREATE INDEX IF NOT EXISTS idx_transactions_symbol ON transactions(symbol);
         """
 
         with self.engine.connect() as conn:
@@ -463,3 +504,158 @@ class Repository:
             )
             conn.commit()
         logger.debug(f"Updated sync log: {data_type}/{market} -> {sync_date}")
+
+    # ============== Account 操作 ==============
+
+    def create_account(self, account) -> "Account":
+        """创建账户"""
+        from src.models.portfolio import Account
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("""
+                INSERT INTO accounts (name, account_type, initial_capital, current_cash)
+                VALUES (:name, :account_type, :initial_capital, :current_cash)
+            """), {
+                "name": account.name,
+                "account_type": account.account_type.value if hasattr(account.account_type, "value") else account.account_type,
+                "initial_capital": float(account.initial_capital),
+                "current_cash": float(account.current_cash),
+            })
+            conn.commit()
+            account.id = result.lastrowid
+            return account
+
+    def get_accounts(self) -> list["Account"]:
+        """获取所有账户"""
+        from src.models.portfolio import Account
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("SELECT * FROM accounts ORDER BY created_at DESC"))
+            accounts = []
+            for row in result:
+                accounts.append(Account(
+                    id=row[0],
+                    name=row[1],
+                    account_type=row[2],
+                    initial_capital=Decimal(str(row[3])),
+                    current_cash=Decimal(str(row[4])),
+                    created_at=row[5],
+                    updated_at=row[6],
+                ))
+            return accounts
+
+    def get_account(self, account_id: int):
+        """获取单个账户"""
+        from src.models.portfolio import Account
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("SELECT * FROM accounts WHERE id = :id"), {"id": account_id})
+            row = result.fetchone()
+            if row:
+                return Account(
+                    id=row[0],
+                    name=row[1],
+                    account_type=row[2],
+                    initial_capital=Decimal(str(row[3])),
+                    current_cash=Decimal(str(row[4])),
+                    created_at=row[5],
+                    updated_at=row[6],
+                )
+            return None
+
+    def update_account_cash(self, account_id: int, cash_change: Decimal):
+        """更新账户现金"""
+        with self.engine.connect() as conn:
+            conn.execute(text("""
+                UPDATE accounts SET current_cash = current_cash + :change,
+                updated_at = CURRENT_TIMESTAMP WHERE id = :id
+            """), {"change": float(cash_change), "id": account_id})
+            conn.commit()
+
+    def delete_account(self, account_id: int):
+        """删除账户"""
+        with self.engine.connect() as conn:
+            conn.execute(text("DELETE FROM accounts WHERE id = :id"), {"id": account_id})
+            conn.commit()
+
+    # ============== Transaction 操作 ==============
+
+    def add_transaction(self, transaction) -> "Transaction":
+        """添加交易记录"""
+        from src.models.portfolio import Transaction
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("""
+                INSERT INTO transactions (account_id, symbol, trade_type, shares, price, amount, fee, trade_date, notes)
+                VALUES (:account_id, :symbol, :trade_type, :shares, :price, :amount, :fee, :trade_date, :notes)
+            """), {
+                "account_id": transaction.account_id,
+                "symbol": transaction.symbol,
+                "trade_type": transaction.trade_type.value if hasattr(transaction.trade_type, "value") else transaction.trade_type,
+                "shares": transaction.shares,
+                "price": float(transaction.price),
+                "amount": float(transaction.amount),
+                "fee": float(transaction.fee),
+                "trade_date": transaction.trade_date,
+                "notes": transaction.notes,
+            })
+            conn.commit()
+            transaction.id = result.lastrowid
+
+            # 更新账户现金
+            cash_change = -transaction.amount if transaction.trade_type.value in ("买入", "BUY") else transaction.amount
+            self.update_account_cash(transaction.account_id, cash_change)
+
+            return transaction
+
+    def get_transactions(self, account_id: int, limit: int = 100) -> list["Transaction"]:
+        """获取交易记录"""
+        from src.models.portfolio import Transaction, TradeType
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT * FROM transactions WHERE account_id = :account_id
+                ORDER BY trade_date DESC, created_at DESC LIMIT :limit
+            """), {"account_id": account_id, "limit": limit})
+            transactions = []
+            for row in result:
+                transactions.append(Transaction(
+                    id=row[0],
+                    account_id=row[1],
+                    symbol=row[2],
+                    trade_type=TradeType(row[3]),
+                    shares=row[4],
+                    price=Decimal(str(row[5])),
+                    amount=Decimal(str(row[6])),
+                    fee=Decimal(str(row[7])),
+                    trade_date=row[8],
+                    notes=row[9],
+                    created_at=row[10],
+                ))
+            return transactions
+
+    def get_transactions_by_symbol(self, account_id: int, symbol: str) -> list["Transaction"]:
+        """获取指定股票的交易记录"""
+        from src.models.portfolio import Transaction, TradeType
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT * FROM transactions WHERE account_id = :account_id AND symbol = :symbol
+                ORDER BY trade_date ASC
+            """), {"account_id": account_id, "symbol": symbol})
+            transactions = []
+            for row in result:
+                transactions.append(Transaction(
+                    id=row[0],
+                    account_id=row[1],
+                    symbol=row[2],
+                    trade_type=TradeType(row[3]),
+                    shares=row[4],
+                    price=Decimal(str(row[5])),
+                    amount=Decimal(str(row[6])),
+                    fee=Decimal(str(row[7])),
+                    trade_date=row[8],
+                    notes=row[9],
+                    created_at=row[10],
+                ))
+            return transactions

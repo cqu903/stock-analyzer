@@ -25,10 +25,21 @@ from src.models.schemas import (
     WatchlistItem,
 )
 
+from src.models.portfolio import (
+    Account, AccountType, AccountSummary,
+    Position, Transaction, TradeType
+)
+
+from src.models.screening import (
+    Strategy, ScreenResult
+)
+
 __all__ = [
     # 枚举
     "Market",
     "AlertType",
+    "AccountType",
+    "TradeType",
     # 基础数据模型
     "StockInfo",
     "DailyQuote",
@@ -51,4 +62,14 @@ __all__ = [
     "TechnicalReport",
     # AI分析模型
     "AIAnalysis",
+    # 组合管理模型
+    "Account",
+    "AccountType",
+    "AccountSummary",
+    "Position",
+    "Transaction",
+    "TradeType",
+    # 量化选股模型
+    "Strategy",
+    "ScreenResult",
 ]

@@ -74,3 +74,34 @@ CREATE TABLE IF NOT EXISTS data_sync_log (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_type_market (data_type, market)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 账户表
+CREATE TABLE IF NOT EXISTS accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL COMMENT '账户名称',
+    account_type ENUM('证券账户', '模拟账户') DEFAULT '证券账户' COMMENT '账户类型',
+    initial_capital DECIMAL(18,2) NOT NULL COMMENT '初始资金',
+    current_cash DECIMAL(18,2) NOT NULL COMMENT '当前现金',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 交易记录表
+CREATE TABLE IF NOT EXISTS transactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT NOT NULL COMMENT '所属账户',
+    symbol VARCHAR(20) NOT NULL COMMENT '股票代码',
+    trade_type ENUM('买入', '卖出') NOT NULL COMMENT '交易类型',
+    shares BIGINT NOT NULL COMMENT '成交数量',
+    price DECIMAL(10,3) NOT NULL COMMENT '成交价格',
+    amount DECIMAL(18,2) NOT NULL COMMENT '成交金额',
+    fee DECIMAL(10,2) DEFAULT 0 COMMENT '手续费',
+    CONSTRAINT chk_fee CHECK (fee >= 0),
+    trade_date DATE NOT NULL COMMENT '交易日期',
+    notes TEXT COMMENT '备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (symbol) REFERENCES stocks(symbol) ON DELETE CASCADE,
+    INDEX idx_account_date (account_id, trade_date),
+    INDEX idx_symbol (symbol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
